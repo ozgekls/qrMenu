@@ -32,7 +32,7 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     // 🚧 Veritabanı varsa dokunma, yoksa oluştur
-    context.Database.Migrate(); // veya: context.Database.EnsureCreated();
+    context.Database.EnsureCreated(); // veya: context.Database.EnsureCreated();
 
     // 👤 Admin kullanıcı yoksa ekle
     if (!context.AdminUsers.Any())
