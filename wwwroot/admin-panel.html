@@ -1,0 +1,247 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Admin Panel</title>
+    <link href="/css/bootstrap.min.css" rel="stylesheet" />
+
+
+    <style>
+        .logout-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .btn-logout {
+            background-color: #cc1735;
+            color: #fcf259;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            border-radius: 30px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            transition: all 0.3s ease-in-out;
+        }
+
+            .btn-logout:hover {
+                background-color: #ff2e4c;
+                color: white;
+                transform: scale(1.05);
+            }
+
+        #alertBox .alert {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 0;
+        }
+
+    </style>
+
+</head>
+<body class="bg-light p-4">
+    <div class="container">
+        <h2 class="mb-4">📋 Menü Yönetimi</h2>
+
+        <!-- Yeni Ürün Ekleme Formu -->
+        <div class="card p-3 mb-4">
+            <h5>➕ Yeni Ürün Ekle</h5>
+            <div class="mb-2">
+                <input type="text" id="name" class="form-control" placeholder="Ürün adı" />
+            </div>
+            <div class="mb-2">
+                <input type="text" id="description" class="form-control" placeholder="Açıklama" />
+            </div>
+            <div class="mb-2">
+                <input type="number" id="price" class="form-control" placeholder="Fiyat" />
+            </div>
+            <button class="btn btn-success" onclick="addItem()">Ekle</button>
+        </div>
+        <div id="alertBox" class="mt-3"></div>
+
+        <div class="mb-2">
+            <input type="text" id="imageUrl" class="form-control" placeholder="Görsel URL (örnek: /images/tost.jpg)" />
+        </div>
+        <div class="logout-button text-end">
+            <button onclick="logout()" class="btn btn-logout">
+                🚪 Çıkış Yap
+            </button>
+        </div>
+
+
+
+        <!--dropdown kategori seçme -->
+        <select id="category" class="form-control mb-2">
+            <option value="">Kategori Seç</option>
+            <option value="Yiyecek">Yiyecek</option>
+            <option value="İçecek">İçecek</option>
+        </select>
+
+        <select id="subCategory" class="form-control mb-2">
+            <option value="">Alt Kategori Seç</option>
+            <!-- Yiyecek -->
+            <option value="Kahvaltılıklar">Kahvaltılıklar</option>
+            <option value="Tatlılar">Tatlılar</option>
+            <option value="Ana Yemekler">Ana Yemekler</option>
+            <option value="Burgerler">Burgerler</option>
+            <option value="Aperatifler">Aperatifler</option>
+
+            <!-- İçecek -->
+            <option value="Sıcak İçecekler">Sıcak İçecekler</option>
+            <option value="Soğuk İçecekler">Soğuk İçecekler</option>
+        </select>
+
+
+
+        <!-- Menü Listesi -->
+        <div id="menuList" class="row g-3"></div>
+    </div>
+
+    <script>
+        if (localStorage.getItem("auth") !== "true") {
+            window.location.href = "/admin-login.html";
+        }
+
+        // API'den verileri çek
+
+    async function getMenuItems() {
+      const response = await fetch('/api/menu');
+      const items = await response.json();
+
+      const menuList = document.getElementById('menuList');
+      menuList.innerHTML = '';
+
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'col-md-4';
+
+        div.innerHTML = `
+          <div class="card p-3 shadow-sm">
+            <h5>${item.name}</h5>
+            <p>${item.description}</p>
+            <strong>${item.price}₺</strong>
+            <div class="mt-2 d-flex gap-2">
+              <button class="btn btn-sm btn-primary" onclick="editItem(${item.id})">Düzenle</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteItem(${item.id})">Sil</button>
+            </div>
+          </div>
+
+           <!-- Düzenleme Formu -->
+            <div class="edit-form mt-3" id="editForm-${item.id}" style="display: none;">
+              <input type="text" class="form-control mb-2" id="editName-${item.id}" value="${item.name}">
+              <input type="text" class="form-control mb-2" id="editDescription-${item.id}" value="${item.description}">
+              <input type="number" class="form-control mb-2" id="editPrice-${item.id}" value="${item.price}">
+              <!-- Kategori -->
+                <select class="form-control mb-2" id="editCategory-${item.id}">
+                  <option value="Yiyecek" ${item.category === 'Yiyecek' ? 'selected' : ''}>Yiyecek</option>
+                  <option value="İçecek" ${item.category === 'İçecek' ? 'selected' : ''}>İçecek</option>
+                </select>
+
+            <!-- Alt Kategori -->
+                <select class="form-control mb-2" id="editSubCategory-${item.id}">
+                  <option value="Kahvaltılıklar" ${item.subCategory === 'Kahvaltılıklar' ? 'selected' : ''}>Kahvaltılıklar</option>
+                  <option value="Tatlılar" ${item.subCategory === 'Tatlılar' ? 'selected' : ''}>Tatlılar</option>
+                  <option value="Ana Yemekler" ${item.subCategory === 'Ana Yemekler' ? 'selected' : ''}>Ana Yemekler</option>
+                  <option value="Burgerler" ${item.subCategory === 'Burgerler' ? 'selected' : ''}>Burgerler</option>
+                  <option value="Aperatifler" ${item.subCategory === 'Aperatifler' ? 'selected' : ''}>Aperatifler</option>
+                  <option value="Sıcak İçecekler" ${item.subCategory === 'Sıcak İçecekler' ? 'selected' : ''}>Sıcak İçecekler</option>
+                  <option value="Soğuk İçecekler" ${item.subCategory === 'Soğuk İçecekler' ? 'selected' : ''}>Soğuk İçecekler</option>
+                </select>
+
+                <div class="d-flex gap-2">
+                <button class="btn btn-success btn-sm" onclick="saveItem(${item.id})">Kaydet</button>
+                <button class="btn btn-secondary btn-sm" onclick="cancelEdit(${item.id})">İptal</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        menuList.appendChild(div);
+      });
+    }
+
+    // Ürün ekle
+    async function addItem() {
+     const name = document.getElementById('name').value;
+     const description = document.getElementById('description').value;
+     const price = parseFloat(document.getElementById('price').value);
+     const imageUrl = document.getElementById('imageUrl').value;
+
+     const category = document.getElementById('category').value;
+     const subCategory = document.getElementById('subCategory').value;
+
+     const alertBox = document.getElementById('alertBox');
+
+        // VALIDASYONLAR
+        if (!name ||  isNaN(price) || price <= 0 || !category || !subCategory) {
+            alertBox.innerHTML = `<div class="alert alert-danger">Lütfen tüm alanları doldurun ve fiyatı doğru girin.</div>`;
+            return;
+        }
+
+      await fetch('/api/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description, price, imageUrl, category, subCategory})
+    });
+
+        alertBox.innerHTML = `<div class="alert alert-success">Ürün başarıyla eklendi ✅</div>`;
+        setTimeout(() => {
+            alertBox.innerHTML = '';
+        }, 3000);
+
+
+        // Formu temizle
+        document.getElementById('name').value = '';
+        document.getElementById('description').value = '';
+        document.getElementById('price').value = '';
+        document.getElementById('imageUrl').value = '';
+        document.getElementById('category').value = '';
+        document.getElementById('subCategory').value = '';
+
+     getMenuItems(); // Listeyi güncelle
+    }
+
+    // Ürün sil
+    async function deleteItem(id) {
+      await fetch(`/api/menu/${id}`, { method: 'DELETE' });
+      getMenuItems();
+    }
+
+
+      function editItem(id) {
+            document.getElementById(`editForm-${id}`).style.display = 'block';
+      }
+
+      function cancelEdit(id) {
+            document.getElementById(`editForm-${id}`).style.display = 'none';
+      }
+
+      async function saveItem(id) {
+            const name = document.getElementById(`editName-${id}`).value;
+            const description = document.getElementById(`editDescription-${id}`).value;
+            const price = parseFloat(document.getElementById(`editPrice-${id}`).value);
+            const imageUrl = document.getElementById('imageUrl').value;
+
+            const category = document.getElementById('category').value;
+            const subCategory = document.getElementById('subCategory').value;
+
+            await fetch(`/api/menu/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, description, price, imageUrl, category, subCategory })
+            });
+
+            await getMenuItems(); // Listeyi güncelle
+      }
+     function logout() {
+            localStorage.removeItem("auth");
+            window.location.href = "/menu.html";
+        }
+
+
+    // Sayfa açılınca listeyi yükle
+    getMenuItems();
+    </script>
+</body>
+</html>
