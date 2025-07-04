@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using qrMenu.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,16 +31,21 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+    // 🚧 Veritabanı varsa dokunma, yoksa oluştur
+    context.Database.Migrate(); // veya: context.Database.EnsureCreated();
+
+    // 👤 Admin kullanıcı yoksa ekle
     if (!context.AdminUsers.Any())
     {
         context.AdminUsers.Add(new AdminUser
         {
             Username = "admin",
-            Password = "1234" // �imdilik sade, sonra hash yap�l�r
+            Password = "1234" // Sonra hash’lenir
         });
         context.SaveChanges();
     }
 }
+
 
 
 app.UseHttpsRedirection();
